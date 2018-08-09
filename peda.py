@@ -19,6 +19,9 @@ import signal
 import traceback
 import codecs
 
+rows, __columns = os.popen('stty size', 'r').read().split()
+cSize = int(__columns) - 2
+
 # point to absolute path of peda.py
 PEDAFILE = os.path.abspath(os.path.expanduser(__file__))
 if os.path.islink(PEDAFILE):
@@ -4271,7 +4274,7 @@ class PEDACmd(object):
 
         pc = peda.getreg("pc")
         # display register info
-        msg("[%s]" % "registers".center(78, "-"), "blue")
+        msg("%s" % "[registers]".center(cSize, "─"), "yellow", "light")
         self.xinfo("register")
 
         return
@@ -4297,7 +4300,7 @@ class PEDACmd(object):
         else:
             inst = None
 
-        text = blue("[%s]" % "code".center(78, "-"))
+        text = yellow("%s" % "[code]".center(cSize, "─"), "light")
         msg(text)
         if inst: # valid $PC
             text = ""
@@ -4358,7 +4361,7 @@ class PEDACmd(object):
         if not self._is_running():
             return
 
-        text = blue("[%s]" % "stack".center(78, "-"))
+        text = yellow("%s" % "[stack]".center(cSize, "─"), "light")
         msg(text)
         sp = peda.getreg("sp")
         if peda.is_address(sp):
@@ -4408,7 +4411,7 @@ class PEDACmd(object):
         # display stack content, forced in case SIGSEGV
         if "stack" in opt or "SIGSEGV" in status:
             self.context_stack(count)
-        msg("[%s]" % ("-"*78), "blue")
+        msg("%s" % ("─"*(cSize + 2)), "yellow", "light")
         msg("Legend: %s, %s, %s, value" % (red("code"), blue("data"), green("rodata")))
 
         # display stopped reason
@@ -4746,6 +4749,8 @@ class PEDACmd(object):
 
         step = peda.intsize()
         if not peda.is_address(address): # cannot determine address
+            msg("Invalid $SP address: 0x%x" % address, "red")
+            return
             for i in range(count):
                 if not peda.execute("x/%sx 0x%x" % ("g" if step == 8 else "w", address + i*step)):
                     break
@@ -6114,7 +6119,7 @@ def sigint_handler(signal, frame):
     gdb.execute("set logging off")
     peda.restore_user_command("all")
     raise KeyboardInterrupt
-signal.signal(signal.SIGINT, sigint_handler)
+#signal.signal(signal.SIGINT, sigint_handler)
 
 # custom hooks
 peda.define_user_command("hook-stop",
@@ -6141,7 +6146,7 @@ Alias("find", "peda searchmem") # override gdb find command
 Alias("ftrace", "peda tracecall")
 Alias("itrace", "peda traceinst")
 Alias("jtrace", "peda traceinst j")
-Alias("stack", "peda telescope $sp")
+Alias("stack", "peda telescope $sp 20")
 Alias("viewmem", "peda telescope")
 Alias("reg", "peda xinfo register")
 
@@ -6149,7 +6154,7 @@ Alias("reg", "peda xinfo register")
 peda.execute("set confirm off")
 peda.execute("set verbose off")
 peda.execute("set output-radix 0x10")
-peda.execute("set prompt \001%s\002" % red("\002gdb-peda$ \001")) # custom prompt
+peda.execute("set prompt \001%s\002" % red("\002λ peda$ \001")) # custom prompt
 peda.execute("set height 0") # disable paging
 peda.execute("set history expansion on")
 peda.execute("set history save on") # enable history saving
